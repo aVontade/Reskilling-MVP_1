@@ -1,0 +1,189 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { generateVisualization } from '../api';
+import './VisualizationGenerator.css';
+
+// Import Vega-Embed
+let vegaEmbed;
+if (typeof window !== 'undefined') {
+  import('vega-embed').then(module => {
+    vegaEmbed = module.default;
+  });
+}
+
+const VisualizationGenerator = () => {
+  const [description, setDescription] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [visualization, setVisualization] = useState(null);
+  const [error, setError] = useState(null);
+  const chartRef = useRef(null);
+
+  const predefinedDescriptions = [
+    "AI adoption rates across different industries",
+    "Skills transformation timeline for AI economy",
+    "Salary premiums for workers with AI skills",
+    "Job market changes due to AI automation",
+    "Training effectiveness metrics for reskilling programs",
+    "DeepSeek V3.1 vs other AI models comparison"
+  ];
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!description.trim() || isLoading) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await generateVisualization(description);
+      setVisualization(response);
+    } catch (err) {
+      setError(err.message);
+      setVisualization(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePredefinedClick = (desc) => {
+    setDescription(desc);
+  };
+
+  useEffect(() => {
+    if (visualization && visualization.specification && chartRef.current && vegaEmbed) {
+      // Clear previous chart
+      chartRef.current.innerHTML = '';
+      
+      // Render new chart
+      vegaEmbed(chartRef.current, visualization.specification, {
+        theme: 'quartz',
+        actions: {
+          export: true,
+          source: false,
+          compiled: false,
+          editor: false
+        }
+      }).catch(err => {
+        console.error('Error rendering chart:', err);
+        setError('Failed to render visualization');
+      });
+    }
+  }, [visualization]);
+
+  return (
+    <div className="visualization-generator">
+      <div className="viz-header">
+        <h2>📊 AI Visualization Generator</h2>
+        <div className="powered-by">
+          <span>Powered by</span>
+          <div className="model-badge">
+            <span className="model-name">DeepSeek V3.1</span>
+            <span className="model-params">685B params</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="viz-content">
+        <div className="input-section">
+          <form onSubmit={handleSubmit} className="viz-form">
+            <div className="input-group">
+              <label htmlFor="description">Describe the visualization you want:</label>
+              <textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="e.g., 'Show AI adoption rates by industry with interactive bars'"
+                rows={3}
+                disabled={isLoading}
+                className="viz-input"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={!description.trim() || isLoading}
+              className="generate-btn"
+            >
+              {isLoading ? (
+                <>
+                  <span className="spinner"></span>
+                  Generating...
+                </>
+              ) : (
+                <>
+                  🎨 Generate Visualization
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="predefined-section">
+            <h4>Quick Examples:</h4>
+            <div className="predefined-buttons">
+              {predefinedDescriptions.map((desc, index) => (
+                <button
+                  key={index}
+                  onClick={() => handlePredefinedClick(desc)}
+                  className="predefined-btn"
+                  disabled={isLoading}
+                >
+                  {desc}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="output-section">
+          {error && (
+            <div className="error-message">
+              <h4>❌ Error</h4>
+              <p>{error}</p>
+            </div>
+          )}
+
+          {visualization && !error && (
+            <div className="visualization-result">
+              <div className="result-header">
+                <h4>✨ Generated Visualization</h4>
+                <div className="result-description">
+                  <strong>Description:</strong> {visualization.description}
+                </div>
+              </div>
+              <div className="chart-container">
+                <div ref={chartRef} className="vega-chart"></div>
+              </div>
+              <div className="chart-info">
+                <p>💡 This interactive chart was generated by DeepSeek V3.1 based on your description. You can hover, click, and interact with the visualization.</p>
+              </div>
+            </div>
+          )}
+
+          {!visualization && !error && !isLoading && (
+            <div className="placeholder">
+              <div className="placeholder-content">
+                <h3>🎯 Ready to Create</h3>
+                <p>Describe any visualization related to AI, reskilling, or workforce transformation, and DeepSeek V3.1 will generate an interactive chart for you.</p>
+                <div className="features">
+                  <div className="feature">
+                    <span className="feature-icon">⚡</span>
+                    <span>Fast generation with DeepSeek V3.1</span>
+                  </div>
+                  <div className="feature">
+                    <span className="feature-icon">📊</span>
+                    <span>Interactive Vega-Lite charts</span>
+                  </div>
+                  <div className="feature">
+                    <span className="feature-icon">💰</span>
+                    <span>Cost-effective AI processing</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default VisualizationGenerator;
+

@@ -1,0 +1,6 @@
+Flask
+Flask-CORS
+graphene
+openai
+python-dotenv
+
